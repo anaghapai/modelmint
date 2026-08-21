@@ -1,0 +1,8 @@
+[
+  {"id": "sentiment-distilbert", "name": "DistilBERT Sentiment", "task_type": "sentiment", "hf_endpoint": "distilbert-base-uncased-finetuned-sst-2-english", "description": "Fast sentiment classifier", "price_tier": "free"},
+  {"id": "translate-en-hi", "name": "English-Hindi Translator", "task_type": "translation", "hf_endpoint": "Helsinki-NLP/opus-mt-en-hi", "description": "English to Hindi translation", "price_tier": "free"},
+  {"id": "summarize-bart", "name": "BART Summarizer", "task_type": "summarization", "hf_endpoint": "facebook/bart-large-cnn", "description": "Long-form text summarization", "price_tier": "free"},
+  {"id": "ner-bert", "name": "BERT NER", "task_type": "ner", "hf_endpoint": "dslim/bert-base-NER", "description": "Named entity recognition", "price_tier": "free"},
+  {"id": "toxicity-classifier", "name": "Toxicity Detector", "task_type": "classification", "hf_endpoint": "unitary/toxic-bert", "description": "Detects toxic text", "price_tier": "free"},
+  {"id": "vit-image-classifier", "name": "ViT Image Classifier", "task_type": "image-classification", "hf_endpoint": "google/vit-base-patch16-224", "description": "General image classification", "price_tier": "free"}
+]
