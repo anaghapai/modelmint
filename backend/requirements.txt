@@ -5,3 +5,7 @@ sqlmodel
 sentence-transformers
 requests
 python-dotenv
+
+sentence-transformers
+numpy
+requests
