@@ -17,23 +17,39 @@ def evaluate_stream(model_id: str, test_cases: list[dict], adversarial_cases: li
     Generator that yields each persona result as it completes (SSE-style),
     then yields the final aggregated trust score.
 
+    Each persona call is wrapped individually — if one fails, it yields
+    an error for that stage, falls back to score: 0 for aggregation,
+    and continues to the next persona instead of crashing the stream.
+
     hf_call_data expected shape:
     {
         "timestamps": [list of latency floats],
         "outputs": [list of raw HF response dicts]
     }
     """
-    accuracy_result = run_accuracy_auditor(test_cases)
-    yield f"data: {json.dumps({'stage': 'accuracy', 'result': accuracy_result})}\n\n"
+    try:
+        accuracy_result = run_accuracy_auditor(test_cases)
+        yield f"data: {json.dumps({'stage': 'accuracy', 'result': accuracy_result})}\n\n"
+    except Exception as e:
+        accuracy_result = {"score": 0, "error": str(e)}
+        yield f"data: {json.dumps({'stage': 'accuracy', 'error': str(e)})}\n\n"
 
-    safety_result = run_safety_checker(adversarial_cases)
-    yield f"data: {json.dumps({'stage': 'safety', 'result': safety_result})}\n\n"
+    try:
+        safety_result = run_safety_checker(adversarial_cases)
+        yield f"data: {json.dumps({'stage': 'safety', 'result': safety_result})}\n\n"
+    except Exception as e:
+        safety_result = {"score": 0, "error": str(e)}
+        yield f"data: {json.dumps({'stage': 'safety', 'error': str(e)})}\n\n"
 
-    reliability_result = run_reliability_checker(
-        hf_call_data.get("timestamps", []),
-        hf_call_data.get("outputs", [])
-    )
-    yield f"data: {json.dumps({'stage': 'reliability', 'result': reliability_result})}\n\n"
+    try:
+        reliability_result = run_reliability_checker(
+            hf_call_data.get("timestamps", []),
+            hf_call_data.get("outputs", [])
+        )
+        yield f"data: {json.dumps({'stage': 'reliability', 'result': reliability_result})}\n\n"
+    except Exception as e:
+        reliability_result = {"score": 0, "error": str(e)}
+        yield f"data: {json.dumps({'stage': 'reliability', 'error': str(e)})}\n\n"
 
     trust_score = round(
         0.4 * accuracy_result.get("score", 0)
