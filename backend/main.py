@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
-from routes import models, sandbox
+from routes import models, sandbox, auth
 
 app = FastAPI(title="ModelMint API", version="0.1.0")
 
@@ -31,3 +31,4 @@ def health():
 
 app.include_router(models.router)
 app.include_router(sandbox.router)
+app.include_router(auth.router)
