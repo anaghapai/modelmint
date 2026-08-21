@@ -1,13 +1,21 @@
 from dotenv import load_dotenv
 load_dotenv()
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import JSONResponse
 from database import init_db
 from routes import models, sandbox, auth
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from limiter_instance import limiter
 
 app = FastAPI(title="ModelMint API", version="0.1.0")
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded, slow down"})
 
 app.add_middleware(
     CORSMiddleware,
