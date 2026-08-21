@@ -1,10 +1,10 @@
-﻿import os
+import os
 import json
 import re
 import requests
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
 
 ACCURACY_PROMPT = """You are the Accuracy Auditor persona in an AI model trust evaluation panel.
 
