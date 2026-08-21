@@ -3,7 +3,7 @@ import os
 from sqlmodel import Session, select
 from database import engine, ModelListingDB
 
-HF_TOKEN = os.environ.get("HF_API_TOKEN")
+HF_TOKEN = os.environ.get("HF_API_KEY")
 
 def run_sandbox(model_id: str, input_text: str):
     with Session(engine) as session:
