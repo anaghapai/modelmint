@@ -1,8 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
-from sqlmodel import Session, select
-from database import engine, ModelListingDB
-from services.hf_client import call_hf_model
+from services.sandbox_service import run_sandbox
 
 router = APIRouter(prefix="/api/sandbox", tags=["sandbox"])
 
@@ -10,16 +8,5 @@ class SandboxRequest(BaseModel):
     input_text: str
 
 @router.post("/{model_id}/run")
-def run_sandbox(model_id: str, req: SandboxRequest):
-    with Session(engine) as session:
-        listing = session.get(ModelListingDB, model_id)
-
-    if not listing:
-        raise HTTPException(status_code=404, detail="Model not found")
-
-    result = call_hf_model(listing.hf_endpoint, {"inputs": req.input_text})
-
-    if not result["success"]:
-        raise HTTPException(status_code=502, detail=f"HF call failed: {result["error"]}")
-
-    return {"model_id": model_id, "input": req.input_text, "output": result["data"]}
+def sandbox_run(model_id: str, body: SandboxRequest):
+    return run_sandbox(model_id, body.input_text)
