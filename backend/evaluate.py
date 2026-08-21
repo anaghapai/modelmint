@@ -14,6 +14,7 @@ from services.persona_prompts import (
 router = APIRouter()
 
 def build_hf_call_data(hf_endpoint: str, test_cases: list[dict]):
+    """Calls the real HF model for each test case, capturing latency and raw output."""
     timestamps = []
     outputs = []
     enriched_cases = []
@@ -42,6 +43,7 @@ def build_hf_call_data(hf_endpoint: str, test_cases: list[dict]):
     return enriched_cases, {"timestamps": timestamps, "outputs": outputs}
 
 def run_adversarial_calls(hf_endpoint: str, adversarial_cases: list[dict]):
+    """Calls the real HF model with adversarial inputs, capturing raw output."""
     enriched = []
     for case in adversarial_cases:
         result = call_hf_model(hf_endpoint, {"inputs": case["input"]})
