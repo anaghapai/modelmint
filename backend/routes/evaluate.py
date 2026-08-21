@@ -68,7 +68,7 @@ def evaluate_stream(model_id: str, test_cases: list[dict], adversarial_cases: li
     yield f"data: {json.dumps({'stage': 'final', 'result': final})}\n\n"
 
 
-@router.post("/api/models/{model_id}/evaluate")
+@router.post("/api/models/{model_id:path}/evaluate")
 async def evaluate_model(model_id: str):
     """
     Triggers a full trust evaluation for a model.
