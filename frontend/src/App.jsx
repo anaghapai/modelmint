@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { searchModels, getModelDetail, evaluateModel, explainScore, runSandbox } from './api/client';
+import { getModelDetail, evaluateModel, explainScore, runSandbox } from './api/client';
 
 export default function App() {
   const [model, setModel] = useState(null);
@@ -8,10 +8,13 @@ export default function App() {
   const [loadingExplain, setLoadingExplain] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Sandbox state
+  // Interactive Sandbox State
   const [sandboxInput, setSandboxInput] = useState("This product works well, but customer support was terrible!");
   const [sandboxResult, setSandboxResult] = useState(null);
   const [loadingSandbox, setLoadingSandbox] = useState(false);
+
+  // Comparison View State
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -31,7 +34,7 @@ export default function App() {
   };
 
   const handleRunSandbox = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!sandboxInput.trim()) return;
     setLoadingSandbox(true);
     const result = await runSandbox("sentiment-distilbert", sandboxInput);
@@ -39,9 +42,15 @@ export default function App() {
     setLoadingSandbox(false);
   };
 
+  const presetPrompts = [
+    { label: "Double Negative", text: "I don't dislike this product at all." },
+    { label: "Sarcasm Test", text: "Oh great, another update that breaks everything. Just wonderful!" },
+    { label: "Standard Positive", text: "The delivery was fast and the quality exceeded my expectations." },
+  ];
+
   if (!model || !evaluation) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-200 font-sans">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-200 font-sans">
         <div className="flex items-center space-x-3">
           <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
           <span className="font-medium text-sm">Loading ModelMint Intelligence...</span>
@@ -52,7 +61,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-12">
-      {/* Top Navigation */}
+      {/* Top Navigation Bar */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="bg-indigo-600 text-white font-black px-2.5 py-1 rounded-lg text-lg tracking-wider">MM</div>
@@ -60,7 +69,13 @@ export default function App() {
             ModelMint
           </span>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setShowComparison(!showComparison)}
+            className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg transition"
+          >
+            {showComparison ? "Close Comparison" : "⚡ Compare Models"}
+          </button>
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             ● System Operational
           </span>
@@ -116,6 +131,25 @@ export default function App() {
           </div>
         )}
 
+        {/* Side-by-Side Model Comparison Toggle */}
+        {showComparison && (
+          <div className="bg-slate-900 border border-indigo-500/30 p-6 rounded-2xl mb-6">
+            <h3 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-4">Model Benchmark Comparison</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <span className="font-bold text-white block mb-1">DistilBERT Classifier (Current)</span>
+                <span className="text-emerald-400 font-mono text-xs block mb-2">Trust Score: 87.7/100</span>
+                <span className="text-slate-400 text-xs">Latency: ~120ms | Size: 66M Params</span>
+              </div>
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 opacity-70">
+                <span className="font-bold text-white block mb-1">RoBERTa Base (Baseline)</span>
+                <span className="text-blue-400 font-mono text-xs block mb-2">Trust Score: 92.1/100</span>
+                <span className="text-slate-400 text-xs">Latency: ~340ms | Size: 125M Params</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div className="flex border-b border-slate-800 mb-6 space-x-8">
           <button
@@ -145,13 +179,16 @@ export default function App() {
           <div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               {[
-                { title: "Accuracy", data: evaluation.accuracy, color: "bg-blue-500" },
-                { title: "Safety", data: evaluation.safety, color: "bg-emerald-500" },
-                { title: "Reliability", data: evaluation.reliability, color: "bg-indigo-500" },
+                { title: "Accuracy", data: evaluation.accuracy, color: "bg-blue-500", tip: "Evaluates correct classification on standard and edge-case datasets." },
+                { title: "Safety", data: evaluation.safety, color: "bg-emerald-500", tip: "Measures resistance to jailbreaks, prompt injection, and policy breaches." },
+                { title: "Reliability", data: evaluation.reliability, color: "bg-indigo-500", tip: "Tracks average latency, response stability, and output formatting." },
               ].map((persona, idx) => (
-                <div key={idx} className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                <div key={idx} className="bg-slate-900 border border-slate-800 p-5 rounded-xl group relative">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-slate-300 text-sm">{persona.title}</span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-medium text-slate-300 text-sm">{persona.title}</span>
+                      <span className="text-xs text-slate-500 cursor-help" title={persona.tip}>ⓘ</span>
+                    </div>
                     <span className="font-bold text-slate-100">{persona.data.score}/100</span>
                   </div>
                   
@@ -168,7 +205,7 @@ export default function App() {
               ))}
             </div>
 
-            {/* Explain Score Button & Box */}
+            {/* Explain Score Section */}
             <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
               <div className="flex items-center justify-between">
                 <div>
@@ -185,7 +222,7 @@ export default function App() {
               </div>
 
               {explanation && (
-                <div className="mt-4 p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-lg text-sm text-indigo-200 leading-relaxed animate-fade-in">
+                <div className="mt-4 p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-lg text-sm text-indigo-200 leading-relaxed">
                   {explanation}
                 </div>
               )}
@@ -197,7 +234,24 @@ export default function App() {
         {activeTab === "sandbox" && (
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
             <h2 className="text-base font-semibold text-slate-200 mb-1">Test Model Inference</h2>
-            <p className="text-xs text-slate-400 mb-4">Run live custom text inputs through this model to evaluate output and latency.</p>
+            <p className="text-xs text-slate-400 mb-4">Run custom inputs through this model to evaluate output confidence and response latency.</p>
+
+            {/* Preset Test Prompts */}
+            <div className="mb-4">
+              <span className="text-xs font-medium text-slate-400 block mb-2">Try Preset Edge Cases:</span>
+              <div className="flex flex-wrap gap-2">
+                {presetPrompts.map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSandboxInput(preset.text)}
+                    className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg transition"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <form onSubmit={handleRunSandbox} className="space-y-4">
               <div>
