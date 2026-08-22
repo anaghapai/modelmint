@@ -6,6 +6,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -41,9 +42,10 @@ export default function ChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-80 h-96 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col z-40 overflow-hidden">
+    <div className={fullScreen ? "fixed inset-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col z-40 overflow-hidden" : "fixed bottom-6 right-6 w-80 h-96 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col z-40 overflow-hidden"}>
       <div className="bg-slate-800 px-4 py-3 flex items-center justify-between">
         <span className="text-sm font-semibold text-slate-200">ModelMint Assistant</span>
+        <button onClick={() => setFullScreen(!fullScreen)} className="text-slate-400 hover:text-slate-200 text-sm mr-2">{fullScreen ? "⤡" : "⤢"}</button>
         <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-200 text-sm">✕</button>
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -69,3 +71,7 @@ export default function ChatWidget() {
     </div>
   );
 }
+
+
+
+
