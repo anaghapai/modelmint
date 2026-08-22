@@ -19,6 +19,10 @@ def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=[
+        "https://modelmint-xi.vercel.app",
+        "https://modelmint-lef5uw4wi-a-5c04.vercel.app",
+    ],
     allow_origin_regex=r"http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
@@ -44,4 +48,3 @@ app.include_router(sandbox.router)
 app.include_router(auth.router)
 app.include_router(evaluate.router)
 app.include_router(chat.router)
-
