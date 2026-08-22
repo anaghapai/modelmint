@@ -1,4 +1,4 @@
-﻿const BASE_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 function getToken() { return localStorage.getItem("modelmint_token"); }
 function setToken(token) { localStorage.setItem("modelmint_token", token); }
 function clearToken() { localStorage.removeItem("modelmint_token"); }
