@@ -68,7 +68,7 @@ def _call_gemini(prompt: str) -> dict:
         return {
             "persona_name": "Error",
             "score": 0.0,
-            "rationale": f"Gemini call failed: {str(e)}",
+            "rationale": "Gemini call failed. Please try again.",
             "flags": ["error"]
         }
 
