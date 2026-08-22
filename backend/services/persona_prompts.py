@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import re
 import requests
@@ -129,8 +129,10 @@ Return ONLY valid JSON in this exact format, no markdown, no extra text:
 """
 
 def run_explainer(evaluation_result: dict) -> dict:
+    from services.groq_client import call_groq
     prompt = EXPLAIN_PROMPT.format(evaluation_json=json.dumps(evaluation_result, indent=2))
-    result = _call_gemini(prompt)
+    result = call_groq(prompt)
     if "explanation" not in result:
         return {"explanation": "Unable to generate explanation right now."}
     return result
+
