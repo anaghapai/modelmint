@@ -81,8 +81,9 @@ export function evaluateModel(modelId) {
   });
 }
 export async function explainScore(modelId) {
-  const res = await fetch(`/api/models/${encodeURIComponent(modelId)}/explain`, { method: "POST" });
+  const res = await fetch(`${BASE_URL}/api/models/${encodeURIComponent(modelId)}/explain`, { method: "POST" });
   if (!res.ok) throw new Error("Explain failed");
   return res.json();
 }
+
 
