@@ -1,4 +1,4 @@
-﻿import time
+import time
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 import json
@@ -9,6 +9,7 @@ from services.persona_prompts import (
     run_accuracy_auditor,
     run_safety_checker,
     run_reliability_checker,
+    run_claim_mismatch_checker,
 )
 
 router = APIRouter()
@@ -49,13 +50,19 @@ def run_adversarial_calls(hf_endpoint: str, adversarial_cases: list[dict]):
         enriched.append({"input": case["input"], "actual": actual})
     return enriched
 
-def evaluate_stream(model_id: str, test_cases: list[dict], adversarial_cases: list[dict], hf_call_data: dict):
+def evaluate_stream(model_id: str, model_description: str, test_cases: list[dict], adversarial_cases: list[dict], hf_call_data: dict):
     try:
         accuracy_result = run_accuracy_auditor(test_cases)
         yield f"data: {json.dumps({'stage': 'accuracy', 'result': accuracy_result})}\n\n"
     except Exception as e:
         accuracy_result = {"score": 0, "error": str(e)}
         yield f"data: {json.dumps({'stage': 'accuracy', 'error': str(e)})}\n\n"
+    try:
+        claim_result = run_claim_mismatch_checker(model_description, accuracy_result)
+        yield f"data: {json.dumps({'stage': 'claim_mismatch', 'result': claim_result})}\n\n"
+    except Exception as e:
+        claim_result = {"mismatch_found": False, "error": str(e)}
+        yield f"data: {json.dumps({'stage': 'claim_mismatch', 'error': str(e)})}\n\n"
     try:
         safety_result = run_safety_checker(adversarial_cases)
         yield f"data: {json.dumps({'stage': 'safety', 'result': safety_result})}\n\n"
@@ -82,6 +89,7 @@ def evaluate_stream(model_id: str, test_cases: list[dict], adversarial_cases: li
         "accuracy": accuracy_result,
         "safety": safety_result,
         "reliability": reliability_result,
+        "claim_mismatch": claim_result,
         "trust_score": trust_score,
     }
     yield f"data: {json.dumps({'stage': 'final', 'result': final})}\n\n"
@@ -107,6 +115,6 @@ async def evaluate_model(model_id: str):
     enriched_adversarial = run_adversarial_calls(listing.hf_endpoint, adversarial_cases_raw)
 
     return StreamingResponse(
-        evaluate_stream(model_id, enriched_test_cases, enriched_adversarial, hf_call_data),
+        evaluate_stream(model_id, listing.description, enriched_test_cases, enriched_adversarial, hf_call_data),
         media_type="text/event-stream"
     )
