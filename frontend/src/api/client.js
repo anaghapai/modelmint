@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8000";
+ï»¿const BASE_URL = "http://localhost:8000";
 function getToken() { return localStorage.getItem("modelmint_token"); }
 function setToken(token) { localStorage.setItem("modelmint_token", token); }
 function clearToken() { localStorage.removeItem("modelmint_token"); }
@@ -42,14 +42,14 @@ export async function getModelDetail(modelId) {
 }
 export async function runSandbox(modelId, inputText) {
   const token = getToken();
-  if (!token) throw new Error("Not logged in — call login() first");
+  if (!token) throw new Error("Not logged in â€” call login() first");
   const res = await fetch(`${BASE_URL}/api/sandbox/${modelId}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ input_text: inputText }),
   });
-  if (res.status === 401) throw new Error("Session expired — please log in again");
-  if (res.status === 429) throw new Error("Rate limit exceeded — slow down");
+  if (res.status === 401) throw new Error("Session expired â€” please log in again");
+  if (res.status === 429) throw new Error("Rate limit exceeded â€” slow down");
   if (!res.ok) throw new Error((await res.json()).detail || "Sandbox call failed");
   return res.json();
 }
@@ -81,5 +81,8 @@ export function evaluateModel(modelId) {
   });
 }
 export async function explainScore(modelId) {
-  return { explanation: "AI-generated explanation coming soon." };
+  const res = await fetch(`/api/models/${encodeURIComponent(modelId)}/explain`, { method: "POST" });
+  if (!res.ok) throw new Error("Explain failed");
+  return res.json();
 }
+
