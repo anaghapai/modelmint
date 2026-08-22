@@ -1,4 +1,4 @@
-from dotenv import load_dotenv
+﻿from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +19,7 @@ def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origin_regex=r"http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
