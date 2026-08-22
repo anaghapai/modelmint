@@ -145,6 +145,7 @@ async def explain_model(model_id: str):
     enriched_adversarial = run_adversarial_calls(listing.hf_endpoint, adversarial_cases_raw)
 
     accuracy_result = run_accuracy_auditor(enriched_test_cases)
+    time.sleep(2)
     safety_result = run_safety_checker(enriched_adversarial)
     reliability_result = run_reliability_checker(hf_call_data.get("timestamps", []), hf_call_data.get("outputs", []))
 
@@ -165,3 +166,4 @@ async def explain_model(model_id: str):
 
     explanation = run_explainer(full_result)
     return explanation
+

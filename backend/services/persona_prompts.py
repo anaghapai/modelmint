@@ -3,6 +3,7 @@ import json
 import re
 import requests
 from dotenv import load_dotenv
+from services.groq_client import call_groq
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -74,6 +75,17 @@ Respond with ONLY valid JSON, no markdown fences, no preamble, matching this exa
 }}
 """
 
+EXPLAIN_PROMPT = """Summarize this AI model trust evaluation result in 1-2 short, plain-language sentences for a non-technical user.
+
+Evaluation result:
+{evaluation_json}
+
+Respond with ONLY valid JSON, no markdown fences, no preamble, matching this exact shape:
+{{
+  "explanation": "<1-2 sentence plain language summary>"
+}}
+"""
+
 
 def _call_gemini(prompt: str) -> dict:
     headers = {"Content-Type": "application/json"}
@@ -93,19 +105,35 @@ def _call_gemini(prompt: str) -> dict:
         return {
             "persona_name": "Error",
             "score": 0.0,
-            "rationale": f"Gemini call failed: {e}",
+            "rationale": "Gemini call failed. Please try again.",
+            "flags": ["error"]
+        }
+
+
+def _call_llm(prompt: str) -> dict:
+    try:
+        result = call_groq(prompt)
+        if "error" in result:
+            raise Exception(result["error"])
+        return result
+    except Exception as e:
+        print(f"GROQ DEBUG ERROR: {type(e).__name__}: {e}")
+        return {
+            "persona_name": "Error",
+            "score": 0.0,
+            "rationale": "Evaluation call failed. Please try again.",
             "flags": ["error"]
         }
 
 
 def run_accuracy_auditor(test_cases: list[dict]) -> dict:
     prompt = ACCURACY_PROMPT.format(test_cases_json=json.dumps(test_cases, indent=2))
-    return _call_gemini(prompt)
+    return _call_llm(prompt)
 
 
 def run_safety_checker(adversarial_cases: list[dict]) -> dict:
     prompt = SAFETY_PROMPT.format(test_cases_json=json.dumps(adversarial_cases, indent=2))
-    return _call_gemini(prompt)
+    return _call_llm(prompt)
 
 
 def run_claim_mismatch_checker(model_description: str, accuracy_result: dict) -> dict:
@@ -115,7 +143,7 @@ def run_claim_mismatch_checker(model_description: str, accuracy_result: dict) ->
         accuracy_rationale=accuracy_result.get("rationale"),
         accuracy_flags=accuracy_result.get("flags", [])
     )
-    return _call_gemini(prompt)
+    return _call_llm(prompt)
 
 
 def run_reliability_checker(timestamps: list[float], outputs: list[dict]) -> dict:
@@ -152,19 +180,7 @@ def run_reliability_checker(timestamps: list[float], outputs: list[dict]) -> dic
     }
 
 
-EXPLAIN_PROMPT = """You are summarizing an AI model's trust evaluation for a non-technical user.
-
-Given this evaluation data:
-{evaluation_json}
-
-Write ONE clear, plain-language sentence (max 30 words) explaining what this model's trust score means and why it got that score. No jargon. Be direct.
-
-Return ONLY valid JSON in this exact format, no markdown, no extra text:
-{{"explanation": "<your one sentence here>"}}
-"""
-
 def run_explainer(evaluation_result: dict) -> dict:
-    from services.groq_client import call_groq
     prompt = EXPLAIN_PROMPT.format(evaluation_json=json.dumps(evaluation_result, indent=2))
     result = call_groq(prompt)
     if "explanation" not in result:
