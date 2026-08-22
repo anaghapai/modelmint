@@ -1,11 +1,19 @@
-const BASE_URL = "http://localhost:8000";
+ï»¿const BASE_URL = "http://localhost:8000";
 function getToken() { return localStorage.getItem("modelmint_token"); }
 function setToken(token) { localStorage.setItem("modelmint_token", token); }
+function clearToken() { localStorage.removeItem("modelmint_token"); }
+function getUserEmail() { return localStorage.getItem("modelmint_email"); }
+function setUserEmail(email) { localStorage.setItem("modelmint_email", email); }
+function clearUserEmail() { localStorage.removeItem("modelmint_email"); }
+export function isLoggedIn() { return !!getToken(); }
+export function getCurrentUser() { return getUserEmail(); }
+export function logout() { clearToken(); clearUserEmail(); }
 export async function register(email, password) {
   const res = await fetch(`${BASE_URL}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
   if (!res.ok) throw new Error((await res.json()).detail || "Registration failed");
   const data = await res.json();
   setToken(data.access_token);
+  setUserEmail(email);
   return data;
 }
 export async function login(email, password) {
@@ -13,6 +21,7 @@ export async function login(email, password) {
   if (!res.ok) throw new Error((await res.json()).detail || "Login failed");
   const data = await res.json();
   setToken(data.access_token);
+  setUserEmail(email);
   return data;
 }
 export async function ensureLoggedIn() {
@@ -33,14 +42,14 @@ export async function getModelDetail(modelId) {
 }
 export async function runSandbox(modelId, inputText) {
   const token = getToken();
-  if (!token) throw new Error("Not logged in — call login() first");
+  if (!token) throw new Error("Not logged in â€” call login() first");
   const res = await fetch(`${BASE_URL}/api/sandbox/${modelId}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ input_text: inputText }),
   });
-  if (res.status === 401) throw new Error("Session expired — please log in again");
-  if (res.status === 429) throw new Error("Rate limit exceeded — slow down");
+  if (res.status === 401) throw new Error("Session expired â€” please log in again");
+  if (res.status === 429) throw new Error("Rate limit exceeded â€” slow down");
   if (!res.ok) throw new Error((await res.json()).detail || "Sandbox call failed");
   return res.json();
 }
@@ -72,5 +81,27 @@ export function evaluateModel(modelId) {
   });
 }
 export async function explainScore(modelId) {
-  return { explanation: "AI-generated explanation coming soon." };
+  const res = await fetch(`${BASE_URL}/api/models/${encodeURIComponent(modelId)}/explain`, { method: "POST" });
+  if (!res.ok) throw new Error("Explain failed");
+  return res.json();
+}
+
+
+
+
+export async function sendChatMessage(message, history = []) {
+  const res = await fetch(`${BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  });
+  if (!res.ok) throw new Error("Chat failed");
+  const data = await res.json();
+  return data.reply;
+}
+
+export async function recommendModels(query) {
+  const res = await fetch(`${BASE_URL}/api/models/recommend?q=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error("Recommendation failed");
+  return res.json();
 }

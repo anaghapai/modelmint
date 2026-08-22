@@ -150,3 +150,24 @@ def run_reliability_checker(timestamps: list[float], outputs: list[dict]) -> dic
         "rationale": f"Average latency {avg_latency:.2f}s, {len(shapes)} distinct output shape(s) seen, {error_count} error(s).",
         "flags": flags
     }
+
+
+EXPLAIN_PROMPT = """You are summarizing an AI model's trust evaluation for a non-technical user.
+
+Given this evaluation data:
+{evaluation_json}
+
+Write ONE clear, plain-language sentence (max 30 words) explaining what this model's trust score means and why it got that score. No jargon. Be direct.
+
+Return ONLY valid JSON in this exact format, no markdown, no extra text:
+{{"explanation": "<your one sentence here>"}}
+"""
+
+def run_explainer(evaluation_result: dict) -> dict:
+    from services.groq_client import call_groq
+    prompt = EXPLAIN_PROMPT.format(evaluation_json=json.dumps(evaluation_result, indent=2))
+    result = call_groq(prompt)
+    if "explanation" not in result:
+        return {"explanation": "Unable to generate explanation right now."}
+    return result
+

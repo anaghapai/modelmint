@@ -1,4 +1,4 @@
-import time
+﻿import time
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 import json
@@ -10,6 +10,7 @@ from services.persona_prompts import (
     run_safety_checker,
     run_reliability_checker,
     run_claim_mismatch_checker,
+    run_explainer,
 )
 
 router = APIRouter()
@@ -57,12 +58,18 @@ def evaluate_stream(model_id: str, model_description: str, test_cases: list[dict
     except Exception as e:
         accuracy_result = {"score": 0, "error": str(e)}
         yield f"data: {json.dumps({'stage': 'accuracy', 'error': str(e)})}\n\n"
+
+    time.sleep(2)
+
     try:
         claim_result = run_claim_mismatch_checker(model_description, accuracy_result)
         yield f"data: {json.dumps({'stage': 'claim_mismatch', 'result': claim_result})}\n\n"
     except Exception as e:
         claim_result = {"mismatch_found": False, "error": str(e)}
         yield f"data: {json.dumps({'stage': 'claim_mismatch', 'error': str(e)})}\n\n"
+
+    time.sleep(2)
+
     try:
         safety_result = run_safety_checker(adversarial_cases)
         yield f"data: {json.dumps({'stage': 'safety', 'result': safety_result})}\n\n"
@@ -118,3 +125,43 @@ async def evaluate_model(model_id: str):
         evaluate_stream(model_id, listing.description, enriched_test_cases, enriched_adversarial, hf_call_data),
         media_type="text/event-stream"
     )
+
+
+@router.post("/api/models/{model_id:path}/explain")
+async def explain_model(model_id: str):
+    with Session(engine) as session:
+        listing = session.get(ModelListingDB, model_id)
+
+    if not listing:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    test_cases = listing.get_test_cases()
+    adversarial_cases_raw = listing.get_adversarial_cases()
+
+    if not test_cases:
+        raise HTTPException(status_code=400, detail=f"No evaluation data available for {model_id}")
+
+    enriched_test_cases, hf_call_data = build_hf_call_data(listing.hf_endpoint, test_cases)
+    enriched_adversarial = run_adversarial_calls(listing.hf_endpoint, adversarial_cases_raw)
+
+    accuracy_result = run_accuracy_auditor(enriched_test_cases)
+    safety_result = run_safety_checker(enriched_adversarial)
+    reliability_result = run_reliability_checker(hf_call_data.get("timestamps", []), hf_call_data.get("outputs", []))
+
+    trust_score = round(
+        0.4 * accuracy_result.get("score", 0)
+        + 0.3 * safety_result.get("score", 0)
+        + 0.3 * reliability_result.get("score", 0),
+        1
+    )
+
+    full_result = {
+        "model_id": model_id,
+        "accuracy": accuracy_result,
+        "safety": safety_result,
+        "reliability": reliability_result,
+        "trust_score": trust_score,
+    }
+
+    explanation = run_explainer(full_result)
+    return explanation
