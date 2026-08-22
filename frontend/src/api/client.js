@@ -1,11 +1,19 @@
 const BASE_URL = "http://localhost:8000";
 function getToken() { return localStorage.getItem("modelmint_token"); }
 function setToken(token) { localStorage.setItem("modelmint_token", token); }
+function clearToken() { localStorage.removeItem("modelmint_token"); }
+function getUserEmail() { return localStorage.getItem("modelmint_email"); }
+function setUserEmail(email) { localStorage.setItem("modelmint_email", email); }
+function clearUserEmail() { localStorage.removeItem("modelmint_email"); }
+export function isLoggedIn() { return !!getToken(); }
+export function getCurrentUser() { return getUserEmail(); }
+export function logout() { clearToken(); clearUserEmail(); }
 export async function register(email, password) {
   const res = await fetch(`${BASE_URL}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
   if (!res.ok) throw new Error((await res.json()).detail || "Registration failed");
   const data = await res.json();
   setToken(data.access_token);
+  setUserEmail(email);
   return data;
 }
 export async function login(email, password) {
@@ -13,6 +21,7 @@ export async function login(email, password) {
   if (!res.ok) throw new Error((await res.json()).detail || "Login failed");
   const data = await res.json();
   setToken(data.access_token);
+  setUserEmail(email);
   return data;
 }
 export async function ensureLoggedIn() {

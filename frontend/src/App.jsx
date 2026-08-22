@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getModelDetail, evaluateModel, explainScore, runSandbox, ensureLoggedIn } from './api/client';
+import { getModelDetail, evaluateModel, explainScore, runSandbox, searchModels, isLoggedIn, getCurrentUser, logout } from './api/client';
+import AuthGate from './AuthGate';
 
 const AVAILABLE_MODELS = [
   { id: "sentiment-distilbert", label: "Sentiment (DistilBERT)" },
@@ -11,6 +12,9 @@ const AVAILABLE_MODELS = [
 ];
 
 export default function App() {
+  const [authed, setAuthed] = useState(isLoggedIn());
+  const [userEmail, setUserEmail] = useState(getCurrentUser());
+
   const [selectedModelId, setSelectedModelId] = useState("sentiment-distilbert");
   const [model, setModel] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
@@ -24,7 +28,13 @@ export default function App() {
   const [sandboxResult, setSandboxResult] = useState(null);
   const [loadingSandbox, setLoadingSandbox] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   useEffect(() => {
+    if (!authed) return;
     let cancelled = false;
     async function loadData() {
       setLoadingModel(true);
@@ -34,7 +44,6 @@ export default function App() {
       setExplanation("");
       setSandboxResult(null);
       setModel(null);
-      await ensureLoggedIn();
       try {
         const modelData = await getModelDetail(selectedModelId);
         if (!cancelled) setModel(modelData);
@@ -52,7 +61,7 @@ export default function App() {
     }
     loadData();
     return () => { cancelled = true; };
-  }, [selectedModelId]);
+  }, [selectedModelId, authed]);
 
   const handleExplain = async () => {
     setLoadingExplain(true);
@@ -78,11 +87,49 @@ export default function App() {
     setLoadingSandbox(false);
   };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearchLoading(true);
+    setSearchOpen(true);
+    try {
+      const results = await searchModels(searchQuery);
+      setSearchResults(results || []);
+    } catch (err) {
+      setSearchResults([]);
+    }
+    setSearchLoading(false);
+  };
+
+  const handleSelectSearchResult = (id) => {
+    setSelectedModelId(id);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setAuthed(false);
+    setUserEmail(null);
+  };
+
   const presetPrompts = [
     { label: "Double Negative", text: "I don't dislike this product at all." },
     { label: "Sarcasm Test", text: "Oh great, another update that breaks everything. Just wonderful!" },
     { label: "Standard Positive", text: "The delivery was fast and the quality exceeded my expectations." },
   ];
+
+  if (!authed) {
+    return (
+      <AuthGate
+        onAuthenticated={(email) => {
+          setUserEmail(email);
+          setAuthed(true);
+        }}
+      />
+    );
+  }
 
   if (loadingModel && !model) {
     return (
@@ -97,16 +144,52 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-12">
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="bg-indigo-600 text-white font-black px-2.5 py-1 rounded-lg text-lg tracking-wider">MM</div>
-          <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">ModelMint</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <select value={selectedModelId} onChange={(e) => setSelectedModelId(e.target.value)} className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg transition cursor-pointer">
-            {AVAILABLE_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
-          </select>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">System Operational</span>
+      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-20 px-6 py-4">
+        <div className="flex items-center justify-between max-w-6xl mx-auto gap-4">
+          <div className="flex items-center space-x-3 shrink-0">
+            <div className="bg-indigo-600 text-white font-black px-2.5 py-1 rounded-lg text-lg tracking-wider">MM</div>
+            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">ModelMint</span>
+          </div>
+
+          <div className="relative flex-1 max-w-md">
+            <form onSubmit={handleSearch} className="flex">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+                placeholder="Search models (e.g. translation, toxicity...)"
+                className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500"
+              />
+              <button type="submit" className="ml-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg transition shrink-0">
+                Search
+              </button>
+            </form>
+
+            {searchOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-30">
+                {searchLoading && (<div className="p-3 text-xs text-slate-400">Searching...</div>)}
+                {!searchLoading && searchResults.length === 0 && (<div className="p-3 text-xs text-slate-400">No results found.</div>)}
+                {!searchLoading && searchResults.map((r) => (
+                  <button key={r.id} onClick={() => handleSelectSearchResult(r.id)} className="block w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0">
+                    <div className="font-medium">{r.name}</div>
+                    <div className="text-slate-500">{r.task_type}</div>
+                  </button>
+                ))}
+                <button onClick={() => setSearchOpen(false)} className="block w-full text-center px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-800 transition">Close</button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-3 shrink-0">
+            <select value={selectedModelId} onChange={(e) => setSelectedModelId(e.target.value)} className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg transition cursor-pointer">
+              {AVAILABLE_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
+            </select>
+            <span className="hidden md:inline text-xs text-slate-500">{userEmail}</span>
+            <button onClick={handleLogout} className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -211,7 +294,7 @@ export default function App() {
               <div className="mt-6 border-t border-slate-800 pt-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Output Result</span>
-                  <span className="text-xs text-slate-500 font-mono">{sandboxResult.latency_ms}ms latency</span>
+                  <span className="text-xs text-slate-500 font-mono">{sandboxResult.latency_ms ? `${sandboxResult.latency_ms}ms latency` : ""}</span>
                 </div>
                 <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg text-emerald-400 font-mono text-sm break-words">
                   {JSON.stringify(sandboxResult.output ?? sandboxResult, null, 2)}
