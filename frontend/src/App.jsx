@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { getModelDetail, evaluateModel, explainScore, runSandbox, searchModels, isLoggedIn, getCurrentUser, logout } from './api/client';
 import AuthGate from './AuthGate';
+import ChatWidget from './ChatWidget';
 
 const AVAILABLE_MODELS = [
   { id: "sentiment-distilbert", label: "Sentiment (DistilBERT)" },
@@ -304,6 +305,9 @@ export default function App() {
           </div>
         )}
       </main>
+      <ChatWidget />
     </div>
   );
 }
+
+
