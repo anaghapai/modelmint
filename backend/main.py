@@ -28,6 +28,8 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
+    from seed import seed
+    seed()
 
 @app.get("/")
 def root():
