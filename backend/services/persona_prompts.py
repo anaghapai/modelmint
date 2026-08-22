@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import re
 import requests
@@ -89,10 +89,11 @@ def _call_gemini(prompt: str) -> dict:
         cleaned = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
         return json.loads(cleaned)
     except Exception as e:
+        print(f"GEMINI DEBUG ERROR: {type(e).__name__}: {e}")
         return {
             "persona_name": "Error",
             "score": 0.0,
-            "rationale": "Gemini call failed. Please try again.",
+            "rationale": f"Gemini call failed: {e}",
             "flags": ["error"]
         }
 

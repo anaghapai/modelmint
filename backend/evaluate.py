@@ -55,6 +55,7 @@ def evaluate_stream(model_id: str, test_cases: list[dict], adversarial_cases: li
     try:
         accuracy_result = run_accuracy_auditor(test_cases)
         yield f"data: {json.dumps({'stage': 'accuracy', 'result': accuracy_result})}\n\n"
+        time.sleep(2)
     except Exception as e:
         accuracy_result = {"score": 0, "error": str(e)}
         yield f"data: {json.dumps({'stage': 'accuracy', 'error': str(e)})}\n\n"
@@ -112,3 +113,4 @@ async def evaluate_model(model_id: str):
         evaluate_stream(model_id, enriched_test_cases, enriched_adversarial, hf_call_data),
         media_type="text/event-stream"
     )
+
