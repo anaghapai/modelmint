@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { getModelDetail, evaluateModel, explainScore, runSandbox, searchModels, isLoggedIn, getCurrentUser, logout } from './api/client';
+import { getModelDetail, evaluateModel, explainScore, runSandbox, searchModels, recommendModels, isLoggedIn, getCurrentUser, logout } from './api/client';
 import AuthGate from './AuthGate';
 import ChatWidget from './ChatWidget';
 
@@ -33,6 +33,7 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [recommendation, setRecommendation] = useState('');
 
   useEffect(() => {
     if (!authed) return;
@@ -94,8 +95,9 @@ export default function App() {
     setSearchLoading(true);
     setSearchOpen(true);
     try {
-      const results = await searchModels(searchQuery);
-      setSearchResults(results || []);
+      const data = await recommendModels(searchQuery);
+      setSearchResults(data.results || []);
+        setRecommendation(data.recommendation || '');
     } catch (err) {
       setSearchResults([]);
     }
@@ -170,6 +172,7 @@ export default function App() {
             {searchOpen && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-30">
                 {searchLoading && (<div className="p-3 text-xs text-slate-400">Searching...</div>)}
+                  {!searchLoading && recommendation && (<div className="p-3 text-xs text-indigo-200 bg-indigo-950/40 border-b border-slate-800">💡 {recommendation}</div>)}
                 {!searchLoading && searchResults.length === 0 && (<div className="p-3 text-xs text-slate-400">No results found.</div>)}
                 {!searchLoading && searchResults.map((r) => (
                   <button key={r.id} onClick={() => handleSelectSearchResult(r.id)} className="block w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0">
@@ -309,5 +312,13 @@ export default function App() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
 
 

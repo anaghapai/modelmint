@@ -99,3 +99,9 @@ export async function sendChatMessage(message, history = []) {
   const data = await res.json();
   return data.reply;
 }
+
+export async function recommendModels(query) {
+  const res = await fetch(`${BASE_URL}/api/models/recommend?q=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error("Recommendation failed");
+  return res.json();
+}
