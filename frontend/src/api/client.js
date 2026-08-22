@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+﻿const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 function getToken() { return localStorage.getItem("modelmint_token"); }
 function setToken(token) { localStorage.setItem("modelmint_token", token); }
 function clearToken() { localStorage.removeItem("modelmint_token"); }
@@ -42,14 +42,14 @@ export async function getModelDetail(modelId) {
 }
 export async function runSandbox(modelId, inputText) {
   const token = getToken();
-  if (!token) throw new Error("Not logged in — call login() first");
+  if (!token) throw new Error("Not logged in - call login() first");
   const res = await fetch(`${BASE_URL}/api/sandbox/${modelId}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ input_text: inputText }),
   });
-  if (res.status === 401) throw new Error("Session expired — please log in again");
-  if (res.status === 429) throw new Error("Rate limit exceeded — slow down");
+  if (res.status === 401) throw new Error("Session expired - please log in again");
+  if (res.status === 429) throw new Error("Rate limit exceeded - slow down");
   if (!res.ok) throw new Error((await res.json()).detail || "Sandbox call failed");
   return res.json();
 }
@@ -80,14 +80,20 @@ export function evaluateModel(modelId) {
       .catch(reject);
   });
 }
-export async function explainScore(modelId) {
-  const res = await fetch(`${BASE_URL}/api/models/${encodeURIComponent(modelId)}/explain`, { method: "POST" });
+export async function explainScore(modelId, evaluation) {
+  const res = await fetch(`${BASE_URL}/api/models/${encodeURIComponent(modelId)}/explain`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      accuracy: evaluation.accuracy,
+      safety: evaluation.safety,
+      reliability: evaluation.reliability,
+      trust_score: evaluation.trust_score,
+    }),
+  });
   if (!res.ok) throw new Error("Explain failed");
   return res.json();
 }
-
-
-
 
 export async function sendChatMessage(message, history = []) {
   const res = await fetch(`${BASE_URL}/api/chat`, {

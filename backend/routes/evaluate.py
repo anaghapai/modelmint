@@ -1,6 +1,7 @@
 ﻿import time
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import json
 from sqlmodel import Session
 from database import engine, ModelListingDB
@@ -127,43 +128,20 @@ async def evaluate_model(model_id: str):
     )
 
 
+class ExplainRequest(BaseModel):
+    accuracy: dict
+    safety: dict
+    reliability: dict
+    trust_score: float
+
 @router.post("/api/models/{model_id:path}/explain")
-async def explain_model(model_id: str):
-    with Session(engine) as session:
-        listing = session.get(ModelListingDB, model_id)
-
-    if not listing:
-        raise HTTPException(status_code=404, detail="Model not found")
-
-    test_cases = listing.get_test_cases()
-    adversarial_cases_raw = listing.get_adversarial_cases()
-
-    if not test_cases:
-        raise HTTPException(status_code=400, detail=f"No evaluation data available for {model_id}")
-
-    enriched_test_cases, hf_call_data = build_hf_call_data(listing.hf_endpoint, test_cases)
-    enriched_adversarial = run_adversarial_calls(listing.hf_endpoint, adversarial_cases_raw)
-
-    accuracy_result = run_accuracy_auditor(enriched_test_cases)
-    time.sleep(2)
-    safety_result = run_safety_checker(enriched_adversarial)
-    reliability_result = run_reliability_checker(hf_call_data.get("timestamps", []), hf_call_data.get("outputs", []))
-
-    trust_score = round(
-        0.4 * accuracy_result.get("score", 0)
-        + 0.3 * safety_result.get("score", 0)
-        + 0.3 * reliability_result.get("score", 0),
-        1
-    )
-
+async def explain_model(model_id: str, body: ExplainRequest):
     full_result = {
         "model_id": model_id,
-        "accuracy": accuracy_result,
-        "safety": safety_result,
-        "reliability": reliability_result,
-        "trust_score": trust_score,
+        "accuracy": body.accuracy,
+        "safety": body.safety,
+        "reliability": body.reliability,
+        "trust_score": body.trust_score,
     }
-
     explanation = run_explainer(full_result)
     return explanation
-

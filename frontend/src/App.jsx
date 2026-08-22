@@ -66,9 +66,10 @@ export default function App() {
   }, [selectedModelId, authed]);
 
   const handleExplain = async () => {
+    if (!evaluation) return;
     setLoadingExplain(true);
     try {
-      const res = await explainScore(selectedModelId);
+      const res = await explainScore(selectedModelId, evaluation);
       setExplanation(res.explanation || res.summary || "No explanation available.");
     } catch (err) {
       setExplanation("Explain feature not available yet.");
@@ -312,13 +313,3 @@ export default function App() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
