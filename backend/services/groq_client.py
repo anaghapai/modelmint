@@ -36,3 +36,25 @@ def call_groq(prompt: str, expect_json: bool = True) -> dict:
         return {"error": str(e)}
 
 
+
+
+def get_recommendation(user_query: str, search_results: list) -> str:
+    """Given a user's natural-language need and the top search results,
+    ask Groq to write a short recommendation explaining the best fit."""
+    if not search_results:
+        return "No matching models found for your request."
+
+    results_summary = "\n".join([
+        f"- {r['name']} (task: {r['task_type']}, price: {r.get('price_tier', 'free')}): {r['description']}"
+        for r in search_results[:3]
+    ])
+
+    prompt = f"""A user described their need: "{user_query}"
+
+Here are the top matching models from our catalog:
+{results_summary}
+
+In 1-2 short sentences, recommend the single best fit from this list and briefly explain why it matches their need. Be direct and practical. Plain text only, no markdown."""
+
+    result = call_groq(prompt, expect_json=False)
+    return result.get("text") or "Unable to generate a recommendation right now."
